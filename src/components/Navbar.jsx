@@ -71,8 +71,8 @@ export default function Navbar() {
         ]);
 
         const multiFiltered = multiData.results
-          ?.filter((r) => r.media_type === "movie" || r.media_type === "person")
-          .slice(0, 5)
+          ?.filter((r) => r.media_type === "movie" || r.media_type === "person" || r.media_type === "tv")
+          .slice(0, 6)
           .map((r) => ({ ...r, _type: r.media_type })) || [];
         items.push(...multiFiltered);
 
@@ -124,6 +124,8 @@ export default function Navbar() {
   const goToSuggestion = (item) => {
     if (item._type === "movie") {
       navigate(`/movie/${item.id}`);
+    } else if (item._type === "tv") {
+      navigate(`/show/${item.id}`);
     } else if (item._type === "person") {
       navigate(`/person/${item.id}`);
     } else if (item._type === "company") {
@@ -185,7 +187,7 @@ export default function Navbar() {
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                   onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                  placeholder="Movies, actors, directors…"
+                  placeholder="Movies, shows, actors…"
                   className="w-full bg-transparent px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none"
                 />
               </div>
@@ -208,12 +210,13 @@ export default function Navbar() {
               <div className="absolute top-full right-0 mt-1 w-72 sm:w-80 bg-[#0d0d14]/98 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl shadow-black/60 overflow-hidden z-[100] animate-[pageIn_0.2s_ease]">
                 {suggestions.map((item, i) => {
                   const isMovie = item._type === "movie";
+                  const isTV = item._type === "tv";
                   const isPerson = item._type === "person";
                   const isCompany = item._type === "company";
                   const isGenre = item._type === "genre";
                   const title = isMovie ? item.title : item.name;
-                  const img = isMovie
-                    ? item.poster_path && `${IMAGE_BASE}/w92${item.poster_path}`
+                  const img = isMovie || isTV
+                    ? (item.poster_path && `${IMAGE_BASE}/w92${item.poster_path}`)
                     : isPerson
                       ? item.profile_path && `${IMAGE_BASE}/w92${item.profile_path}`
                       : isCompany && item.logo_path
@@ -221,19 +224,23 @@ export default function Navbar() {
                         : null;
                   const sub = isMovie
                     ? item.release_date?.split("-")[0] || "Movie"
-                    : isPerson
-                      ? item.known_for_department || "Actor"
-                      : isCompany
-                        ? item.origin_country || "Studio"
-                        : "Genre";
+                    : isTV
+                      ? item.first_air_date?.split("-")[0] || "TV Show"
+                      : isPerson
+                        ? item.known_for_department || "Actor"
+                        : isCompany
+                          ? item.origin_country || "Studio"
+                          : "Genre";
                   const badgeColor = isMovie
                     ? "bg-red-600/20 text-red-400"
-                    : isPerson
-                      ? "bg-blue-600/20 text-blue-400"
-                      : isCompany
-                        ? "bg-purple-600/20 text-purple-400"
-                        : "bg-green-600/20 text-green-400";
-                  const badgeLabel = isMovie ? "Movie" : isPerson ? "Person" : isCompany ? "Studio" : "Genre";
+                    : isTV
+                      ? "bg-purple-600/20 text-purple-400"
+                      : isPerson
+                        ? "bg-blue-600/20 text-blue-400"
+                        : isCompany
+                          ? "bg-amber-600/20 text-amber-400"
+                          : "bg-green-600/20 text-green-400";
+                  const badgeLabel = isMovie ? "Movie" : isTV ? "TV" : isPerson ? "Person" : isCompany ? "Studio" : "Genre";
 
                   return (
                     <button
@@ -245,11 +252,13 @@ export default function Navbar() {
                       }`}
                     >
                       {/* Thumbnail */}
-                      <div className={`shrink-0 ${isMovie ? "w-10 h-14 rounded" : isPerson ? "w-10 h-10 rounded-full" : "w-10 h-10 rounded"} overflow-hidden bg-gray-800 flex items-center justify-center`}>
+                      <div className={`shrink-0 ${isMovie || isTV ? "w-10 h-14 rounded" : isPerson ? "w-10 h-10 rounded-full" : "w-10 h-10 rounded"} overflow-hidden bg-gray-800 flex items-center justify-center`}>
                         {img ? (
                           <img src={img} alt="" className="w-full h-full object-cover" />
                         ) : isGenre ? (
                           <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 4V2m10 2V2M1 10h22M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" /></svg>
+                        ) : isTV ? (
+                          <svg className="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
                         ) : isCompany ? (
                           <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                         ) : (

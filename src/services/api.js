@@ -132,3 +132,75 @@ export const discoverByKeyword = (keywordId, page = 1) =>
   tmdb
     .get("/discover/movie", { params: { with_keywords: keywordId, page, sort_by: "popularity.desc" } })
     .then((r) => r.data);
+
+// ═══════════════════════════════════════════════════════════
+// ██  TV SHOWS
+// ═══════════════════════════════════════════════════════════
+
+// ── Trending TV ────────────────────────────────────────────
+export const getTrendingTV = (page = 1) =>
+  tmdb.get("/trending/tv/day", { params: { page } }).then((r) => r.data);
+
+// ── Popular TV ─────────────────────────────────────────────
+export const getPopularTV = (page = 1) =>
+  tmdb.get("/tv/popular", { params: { page } }).then((r) => r.data);
+
+// ── Top Rated TV ───────────────────────────────────────────
+export const getTopRatedTV = (page = 1) =>
+  tmdb.get("/tv/top_rated", { params: { page } }).then((r) => r.data);
+
+// ── Airing Today ───────────────────────────────────────────
+export const getAiringToday = (page = 1) =>
+  tmdb.get("/tv/airing_today", { params: { page } }).then((r) => r.data);
+
+// ── On The Air (next 7 days) ───────────────────────────────
+export const getOnTheAir = (page = 1) =>
+  tmdb.get("/tv/on_the_air", { params: { page } }).then((r) => r.data);
+
+// ── TV Show Details ────────────────────────────────────────
+export const getTVDetails = (id) =>
+  tmdb.get(`/tv/${id}`).then((r) => r.data);
+
+// ── TV Show Videos (trailers) ──────────────────────────────
+export const getTVVideos = (id) =>
+  tmdb.get(`/tv/${id}/videos`).then((r) => r.data);
+
+// ── TV Show Credits ────────────────────────────────────────
+export const getTVCredits = (id) =>
+  tmdb.get(`/tv/${id}/aggregate_credits`).then((r) => r.data);
+
+// ── TV Show Reviews ────────────────────────────────────────
+export const getTVReviews = (id, page = 1) =>
+  tmdb.get(`/tv/${id}/reviews`, { params: { page } }).then((r) => r.data);
+
+// ── TV Content Ratings ─────────────────────────────────────
+export const getTVContentRatings = (id) =>
+  tmdb.get(`/tv/${id}/content_ratings`).then((r) => r.data);
+
+// ── Similar TV Shows ───────────────────────────────────────
+export const getSimilarTV = (id) =>
+  tmdb.get(`/tv/${id}/similar`).then((r) => r.data);
+
+// ── TV Watch Providers ─────────────────────────────────────
+export const getTVWatchProviders = (id) =>
+  tmdb.get(`/tv/${id}/watch/providers`).then((r) => r.data);
+
+// ── TV Season Details ──────────────────────────────────────
+export const getSeasonDetails = (tvId, seasonNum) =>
+  tmdb.get(`/tv/${tvId}/season/${seasonNum}`).then((r) => r.data);
+
+// ── TV Genre List ──────────────────────────────────────────
+export const getTVGenres = () =>
+  tmdb.get("/genre/tv/list").then((r) => r.data.genres);
+
+// ── Discover TV ────────────────────────────────────────────
+export const discoverTV = (params = {}) =>
+  tmdb.get("/discover/tv", { params }).then((r) => r.data);
+
+// ── Person TV Credits ──────────────────────────────────────
+export const getPersonTVCredits = (id) =>
+  tmdb.get(`/person/${id}/tv_credits`).then((r) => r.data);
+
+// ── Search TV Shows ────────────────────────────────────────
+export const searchTV = (query, page = 1) =>
+  tmdb.get("/search/tv", { params: { query, page } }).then((r) => r.data);

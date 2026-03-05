@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   getPersonDetails, getPersonMovieCredits, getPersonImages,
-  getPersonExternalIds, IMAGE_BASE,
+  getPersonExternalIds, getPersonTVCredits, IMAGE_BASE,
 } from "../services/api";
 import RatingRing from "../components/RatingRing";
 import { useScrollReveal } from "../hooks/useScrollReveal";
@@ -30,6 +30,7 @@ export default function PersonDetailsPage() {
   const { id } = useParams();
   const [person, setPerson] = useState(null);
   const [credits, setCredits] = useState({ cast: [], crew: [] });
+  const [tvCredits, setTVCredits] = useState({ cast: [], crew: [] });
   const [images, setImages] = useState([]);
   const [externals, setExternals] = useState({});
   const [loading, setLoading] = useState(true);
@@ -46,10 +47,10 @@ export default function PersonDetailsPage() {
       getPersonMovieCredits(id),
       getPersonImages(id),
       getPersonExternalIds(id),
+      getPersonTVCredits(id),
     ])
-      .then(([p, creds, imgs, ext]) => {
+      .then(([p, creds, imgs, ext, tvCreds]) => {
         setPerson(p);
-        // Sort cast by popularity descending
         const sortedCast = [...(creds.cast || [])].sort(
           (a, b) => (b.popularity || 0) - (a.popularity || 0)
         );
@@ -57,6 +58,13 @@ export default function PersonDetailsPage() {
           (a, b) => (b.popularity || 0) - (a.popularity || 0)
         );
         setCredits({ cast: sortedCast, crew: sortedCrew });
+        const sortedTVCast = [...(tvCreds.cast || [])].sort(
+          (a, b) => (b.popularity || 0) - (a.popularity || 0)
+        );
+        const sortedTVCrew = [...(tvCreds.crew || [])].sort(
+          (a, b) => (b.popularity || 0) - (a.popularity || 0)
+        );
+        setTVCredits({ cast: sortedTVCast, crew: sortedTVCrew });
         setImages(imgs.profiles?.slice(0, 12) || []);
         setExternals(ext);
       })
@@ -102,37 +110,66 @@ export default function PersonDetailsPage() {
     : null;
   const age = calcAge(person.birthday, person.deathday);
   const bestKnownFor = credits.cast.slice(0, 5);
+  const bestKnownTVFor = tvCredits.cast.slice(0, 5);
   const totalMovies = credits.cast.length + credits.crew.length;
+  const totalTV = tvCredits.cast.length + tvCredits.crew.length;
 
-  // Group filmography by decade
+  // Tag credits with media_type
+  const movieCast = credits.cast.map(c => ({ ...c, _type: "movie" }));
+  const movieCrew = credits.crew.map(c => ({ ...c, _type: "movie" }));
+  const tvCast = tvCredits.cast.map(c => ({ ...c, _type: "tv" }));
+  const tvCrew = tvCredits.crew.map(c => ({ ...c, _type: "tv" }));
+
+  // Group filmography by tab
   const allCastFiltered = activeTab === "all"
-    ? credits.cast
+    ? [...movieCast, ...tvCast]
     : activeTab === "acting"
-      ? credits.cast
-      : [];
+      ? [...movieCast, ...tvCast]
+      : activeTab === "tv"
+        ? tvCast
+        : [];
   const allCrewFiltered = activeTab === "all"
-    ? credits.crew
+    ? [...movieCrew, ...tvCrew]
     : activeTab === "directing"
-      ? credits.crew.filter((c) => c.job === "Director")
+      ? [...movieCrew, ...tvCrew].filter((c) => c.job === "Director")
       : activeTab === "writing"
-        ? credits.crew.filter((c) => c.department === "Writing")
+        ? [...movieCrew, ...tvCrew].filter((c) => c.department === "Writing")
         : activeTab === "producing"
-          ? credits.crew.filter((c) => c.department === "Production")
+          ? [...movieCrew, ...tvCrew].filter((c) => c.department === "Production")
           : [];
 
   const combinedFilmography = activeTab === "acting"
     ? allCastFiltered
-    : activeTab === "all"
-      ? [...allCastFiltered, ...allCrewFiltered]
-      : allCrewFiltered;
+    : activeTab === "tv"
+      ? [...tvCast, ...tvCrew]
+      : activeTab === "all"
+        ? [...allCastFiltered, ...allCrewFiltered]
+        : allCrewFiltered;
+
+  // Deduplicate by id + type
+  const seen = new Set();
+  const dedupedFilmography = combinedFilmography.filter(item => {
+    const key = `${item.id}-${item._type}-${item.credit_id || ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Sort by date descending
+  dedupedFilmography.sort((a, b) => {
+    const dateA = a.release_date || a.first_air_date || '';
+    const dateB = b.release_date || b.first_air_date || '';
+    return dateB.localeCompare(dateA);
+  });
 
   // Unique departments for tabs
   const departments = new Set();
   departments.add("all");
-  if (credits.cast.length > 0) departments.add("acting");
-  if (credits.crew.some((c) => c.job === "Director")) departments.add("directing");
-  if (credits.crew.some((c) => c.department === "Writing")) departments.add("writing");
-  if (credits.crew.some((c) => c.department === "Production")) departments.add("producing");
+  if (credits.cast.length > 0 || tvCredits.cast.length > 0) departments.add("acting");
+  if (tvCredits.cast.length + tvCredits.crew.length > 0) departments.add("tv");
+  if ([...movieCrew, ...tvCrew].some((c) => c.job === "Director")) departments.add("directing");
+  if ([...movieCrew, ...tvCrew].some((c) => c.department === "Writing")) departments.add("writing");
+  if ([...movieCrew, ...tvCrew].some((c) => c.department === "Production")) departments.add("producing");
 
   // Highest rated movies
   const highestRated = [...credits.cast]
@@ -200,6 +237,12 @@ export default function PersonDetailsPage() {
                 <p className="text-[10px] text-gray-600 uppercase tracking-wider">Movies</p>
                 <p className="text-lg font-display tracking-wider text-white">{totalMovies}</p>
               </div>
+              {totalTV > 0 && (
+                <div className="glass rounded-lg px-4 py-2.5 text-center">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-wider">TV Shows</p>
+                  <p className="text-lg font-display tracking-wider text-white">{totalTV}</p>
+                </div>
+              )}
               {person.popularity && (
                 <div className="glass rounded-lg px-4 py-2.5 text-center">
                   <p className="text-[10px] text-gray-600 uppercase tracking-wider">Popularity</p>
@@ -306,6 +349,56 @@ export default function PersonDetailsPage() {
           </section>
         )}
 
+        {/* ── BEST KNOWN FOR (TV) ────────────── */}
+        {bestKnownTVFor.length > 0 && (
+          <section className="mt-14 reveal">
+            <h2 className="font-display text-2xl tracking-wider mb-5 uppercase">
+              Known For
+              <span className="text-purple-400 text-lg ml-2">TV Shows</span>
+            </h2>
+            <div className="carousel-row no-scrollbar gap-4 pb-2">
+              {bestKnownTVFor.map((show) => (
+                <Link
+                  key={show.id + "-tv-known"}
+                  to={`/show/${show.id}`}
+                  className="shrink-0 w-[200px] md:w-[240px] group card-hover"
+                >
+                  <div className="aspect-[2/3] rounded-lg overflow-hidden bg-gray-900 mb-2 relative">
+                    {show.poster_path ? (
+                      <img
+                        src={`${IMAGE_BASE}/w342${show.poster_path}`}
+                        alt={show.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-700">
+                        <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute top-2 left-2">
+                      <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-300 border border-purple-500/20">TV</span>
+                    </div>
+                    {show.vote_average > 0 && (
+                      <div className="absolute top-2 right-2">
+                        <RatingRing rating={show.vote_average} size={36} strokeWidth={3} />
+                      </div>
+                    )}
+                    {show.character && (
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <p className="text-[11px] text-gray-400 truncate">as {show.character}</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm font-display tracking-wide line-clamp-1 uppercase">{show.name}</p>
+                  <p className="text-[11px] text-gray-500">{show.first_air_date?.split("-")[0]}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── HIGHEST RATED PERFORMANCES ──────── */}
         {highestRated.length > 0 && (
           <section className="mt-14 reveal">
@@ -384,11 +477,12 @@ export default function PersonDetailsPage() {
               >
                 {dept}
                 <span className="ml-1.5 text-[10px] opacity-60">
-                  ({dept === "all" ? credits.cast.length + credits.crew.length
-                    : dept === "acting" ? credits.cast.length
-                    : dept === "directing" ? credits.crew.filter(c => c.job === "Director").length
-                    : dept === "writing" ? credits.crew.filter(c => c.department === "Writing").length
-                    : credits.crew.filter(c => c.department === "Production").length})
+                  ({dept === "all" ? credits.cast.length + credits.crew.length + tvCredits.cast.length + tvCredits.crew.length
+                    : dept === "acting" ? credits.cast.length + tvCredits.cast.length
+                    : dept === "tv" ? tvCredits.cast.length + tvCredits.crew.length
+                    : dept === "directing" ? [...credits.crew, ...tvCredits.crew].filter(c => c.job === "Director").length
+                    : dept === "writing" ? [...credits.crew, ...tvCredits.crew].filter(c => c.department === "Writing").length
+                    : [...credits.crew, ...tvCredits.crew].filter(c => c.department === "Production").length})
                 </span>
               </button>
             ))}
@@ -396,14 +490,15 @@ export default function PersonDetailsPage() {
 
           {/* Timeline */}
           <div className="space-y-2 max-w-4xl">
-            {combinedFilmography.slice(0, 50).map((item, i) => {
-              const year = item.release_date?.split("-")[0] || "TBA";
-              const title = item.title || item.original_title;
+            {dedupedFilmography.slice(0, 50).map((item, i) => {
+              const isTV = item._type === "tv";
+              const year = (isTV ? item.first_air_date : item.release_date)?.split("-")[0] || "TBA";
+              const title = isTV ? (item.name || item.original_name) : (item.title || item.original_title);
               const role = item.character || item.job || "";
               return (
                 <Link
-                  key={`${item.id}-${item.credit_id || i}`}
-                  to={`/movie/${item.id}`}
+                  key={`${item.id}-${item._type}-${item.credit_id || i}`}
+                  to={isTV ? `/show/${item.id}` : `/movie/${item.id}`}
                   className="group flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/3 transition-colors"
                 >
                   {/* Year */}
@@ -427,6 +522,7 @@ export default function PersonDetailsPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-200 font-medium group-hover:text-white transition-colors truncate">
+                      {isTV && <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold bg-purple-600/30 text-purple-400 rounded mr-2 align-middle">TV</span>}
                       {title}
                     </p>
                     {role && (
@@ -453,9 +549,9 @@ export default function PersonDetailsPage() {
                 </Link>
               );
             })}
-            {combinedFilmography.length > 50 && (
+            {dedupedFilmography.length > 50 && (
               <p className="text-xs text-gray-600 text-center pt-2">
-                + {combinedFilmography.length - 50} more credits
+                + {dedupedFilmography.length - 50} more credits
               </p>
             )}
           </div>

@@ -51,7 +51,7 @@ export default function SearchResults({ watchlist, onToggleWatchlist }) {
       searchMulti(query, 1),
       searchCompanies(query, 1),
     ]).then(([multiData, companyData]) => {
-      setResults(multiData.results?.filter((r) => r.media_type === "movie" || r.media_type === "person") || []);
+      setResults(multiData.results?.filter((r) => r.media_type === "movie" || r.media_type === "person" || r.media_type === "tv") || []);
       setTotalPages(multiData.total_pages);
       setCompanies(companyData.results?.slice(0, 10) || []);
       setLoading(false);
@@ -63,7 +63,7 @@ export default function SearchResults({ watchlist, onToggleWatchlist }) {
     if (loading || page >= totalPages) return;
     setLoading(true);
     searchMulti(query, page + 1).then((data) => {
-      setResults((prev) => [...prev, ...(data.results?.filter((r) => r.media_type === "movie" || r.media_type === "person") || [])]);
+      setResults((prev) => [...prev, ...(data.results?.filter((r) => r.media_type === "movie" || r.media_type === "person" || r.media_type === "tv") || [])]);
       setPage((p) => p + 1);
       setLoading(false);
     });
@@ -89,6 +89,7 @@ export default function SearchResults({ watchlist, onToggleWatchlist }) {
     : results.filter((r) => r.media_type === filter);
 
   const movieCount = results.filter((r) => r.media_type === "movie").length;
+  const tvCount = results.filter((r) => r.media_type === "tv").length;
   const personCount = results.filter((r) => r.media_type === "person").length;
 
   return (
@@ -161,6 +162,7 @@ export default function SearchResults({ watchlist, onToggleWatchlist }) {
             {[
               { key: "all", label: "All", count: results.length },
               { key: "movie", label: "Movies", count: movieCount },
+              { key: "tv", label: "TV Shows", count: tvCount },
               { key: "person", label: "People", count: personCount },
             ].map((tab) => (
               <button
@@ -208,6 +210,48 @@ export default function SearchResults({ watchlist, onToggleWatchlist }) {
                     <p className="text-sm font-display tracking-wide line-clamp-1 uppercase">{item.title}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[11px] text-gray-400">{item.release_date?.split("-")[0]}</span>
+                      {item.vote_average > 0 && (
+                        <span className="text-[11px] text-yellow-400 font-semibold flex items-center gap-0.5">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          {item.vote_average.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              );
+            }
+
+            // TV Show card
+            if (item.media_type === "tv") {
+              const img = item.backdrop_path
+                ? `${IMAGE_BASE}/w780${item.backdrop_path}`
+                : item.poster_path
+                  ? `${IMAGE_BASE}/w500${item.poster_path}`
+                  : null;
+              if (!img) return null;
+              return (
+                <Link
+                  key={`tv-${item.id}`}
+                  to={`/show/${item.id}`}
+                  className="group relative overflow-hidden rounded-lg aspect-video bg-gray-900 card-hover"
+                >
+                  <img
+                    src={img}
+                    alt={item.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="absolute top-2 left-2">
+                    <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-300 border border-purple-500/20">TV</span>
+                  </div>
+                  <div className="absolute bottom-2 left-3 right-3">
+                    <p className="text-sm font-display tracking-wide line-clamp-1 uppercase">{item.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[11px] text-gray-400">{item.first_air_date?.split("-")[0]}</span>
                       {item.vote_average > 0 && (
                         <span className="text-[11px] text-yellow-400 font-semibold flex items-center gap-0.5">
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

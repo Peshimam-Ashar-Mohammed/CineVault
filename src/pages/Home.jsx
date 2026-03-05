@@ -10,9 +10,14 @@ import {
   getGenres,
   getMovieVideos,
   discoverByGenre,
+  getTrendingTV,
+  getPopularTV,
+  getTopRatedTV,
+  getAiringToday,
   IMAGE_BASE,
 } from "../services/api";
 import MovieGrid from "../components/MovieGrid";
+import ShowGrid from "../components/ShowGrid";
 import GenreFilter from "../components/GenreFilter";
 import Loader from "../components/Loader";
 import ParticleField from "../components/ParticleField";
@@ -27,6 +32,10 @@ export default function Home({ watchlist, onToggleWatchlist }) {
   const [nowPlaying, setNowPlaying] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
   const [trendingPeople, setTrendingPeople] = useState([]);
+  const [trendingTV, setTrendingTV] = useState([]);
+  const [popularTV, setPopularTV] = useState([]);
+  const [topRatedTV, setTopRatedTV] = useState([]);
+  const [airingToday, setAiringToday] = useState([]);
   const [genreRows, setGenreRows] = useState([]); // { genre, movies }[]
   const [genres, setGenres] = useState([]);
   const [activeGenre, setActiveGenre] = useState(null);
@@ -58,7 +67,7 @@ export default function Home({ watchlist, onToggleWatchlist }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [t, p, r, np, up, tp, g] = await Promise.all([
+        const [t, p, r, np, up, tp, g, ttv, ptv, trtv, at] = await Promise.all([
           getTrending(),
           getPopular(),
           getTopRated(),
@@ -66,6 +75,10 @@ export default function Home({ watchlist, onToggleWatchlist }) {
           getUpcoming(),
           getTrendingPeople(),
           getGenres(),
+          getTrendingTV(),
+          getPopularTV(),
+          getTopRatedTV(),
+          getAiringToday(),
         ]);
         setTrending(t.results);
         setPopular(p.results);
@@ -74,6 +87,10 @@ export default function Home({ watchlist, onToggleWatchlist }) {
         setUpcoming(up.results);
         setTrendingPeople(tp.results?.slice(0, 20) || []);
         setGenres(g);
+        setTrendingTV(ttv.results || []);
+        setPopularTV(ptv.results || []);
+        setTopRatedTV(trtv.results || []);
+        setAiringToday(at.results || []);
 
         // Hero: pick a high-rated trending movie with backdrop
         const heroPool = t.results.filter(
@@ -342,6 +359,24 @@ export default function Home({ watchlist, onToggleWatchlist }) {
               </section>
             )}
 
+            {/* ── TV Show Rows ──────────────── */}
+            <div className="reveal">
+              <ShowGrid
+                shows={trendingTV}
+                title="Trending TV Shows"
+                watchlist={watchlist}
+                onToggleWatchlist={onToggleWatchlist}
+              />
+            </div>
+            <div className="reveal">
+              <ShowGrid
+                shows={airingToday}
+                title="Airing Today"
+                watchlist={watchlist}
+                onToggleWatchlist={onToggleWatchlist}
+              />
+            </div>
+
             <div className="reveal">
               <MovieGrid
                 movies={upcoming}
@@ -353,7 +388,23 @@ export default function Home({ watchlist, onToggleWatchlist }) {
             <div className="reveal">
               <MovieGrid
                 movies={topRated}
-                title="Top Rated of All Time"
+                title="Top Rated Movies"
+                watchlist={watchlist}
+                onToggleWatchlist={onToggleWatchlist}
+              />
+            </div>
+            <div className="reveal">
+              <ShowGrid
+                shows={popularTV}
+                title="Popular TV Shows"
+                watchlist={watchlist}
+                onToggleWatchlist={onToggleWatchlist}
+              />
+            </div>
+            <div className="reveal">
+              <ShowGrid
+                shows={topRatedTV}
+                title="Top Rated TV Shows"
                 watchlist={watchlist}
                 onToggleWatchlist={onToggleWatchlist}
               />

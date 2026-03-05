@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import MovieDetailsPage from "./pages/MovieDetails";
+import ShowDetailsPage from "./pages/ShowDetails";
 import Watchlist from "./pages/Watchlist";
 import SearchResults from "./pages/SearchResults";
 import PersonDetailsPage from "./pages/PersonDetails";
@@ -26,21 +27,25 @@ export default function App() {
     localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist));
   }, [watchlist]);
 
-  const toggleWatchlist = (movie) => {
+  const toggleWatchlist = (item) => {
     setWatchlist((prev) => {
-      const exists = prev.some((m) => m.id === movie.id);
+      const mediaType = item.media_type || "movie";
+      const exists = prev.some((m) => m.id === item.id && (m.media_type || "movie") === mediaType);
       return exists
-        ? prev.filter((m) => m.id !== movie.id)
+        ? prev.filter((m) => !(m.id === item.id && (m.media_type || "movie") === mediaType))
         : [
             ...prev,
             {
-              id: movie.id,
-              title: movie.title,
-              poster_path: movie.poster_path,
-              backdrop_path: movie.backdrop_path,
-              vote_average: movie.vote_average,
-              release_date: movie.release_date,
-              overview: movie.overview,
+              id: item.id,
+              media_type: mediaType,
+              title: item.title || item.name,
+              name: item.name || item.title,
+              poster_path: item.poster_path,
+              backdrop_path: item.backdrop_path,
+              vote_average: item.vote_average,
+              release_date: item.release_date,
+              first_air_date: item.first_air_date,
+              overview: item.overview,
             },
           ];
     });
@@ -60,6 +65,15 @@ export default function App() {
           path="/movie/:id"
           element={
             <MovieDetailsPage
+              watchlist={watchlist}
+              onToggleWatchlist={toggleWatchlist}
+            />
+          }
+        />
+        <Route
+          path="/show/:id"
+          element={
+            <ShowDetailsPage
               watchlist={watchlist}
               onToggleWatchlist={toggleWatchlist}
             />
